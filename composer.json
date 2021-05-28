@@ -1,0 +1,17 @@
+{
+  "name": "vendor_name/progulus-unified",
+  "description": "description",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "steve",
+      "email": "email@example.com"
+    }
+  ],
+  "require": {
+    "vlucas/phpdotenv": "^5.3",
+    "ext-pdo": "*",
+    "ext-json": "*"
+  }
+}
