@@ -1,0 +1,4 @@
+/vendor/
+/include/.env
+/lastfm*.*
+/google*.html
