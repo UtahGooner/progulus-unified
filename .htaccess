@@ -1,6 +1,9 @@
 RedirectMatch 301 CDList.html /rprweb/cdlist.php
 Redirect 301 /samPHPweb/logo.gif /rprweb/images/progulus-logo-1.png
 
+RewriteEngine On
+RewriteRule ^(.*)\.phar$ - [F]
+
 #RewriteEngine On
 #RewriteBase /
 #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
