@@ -1,4 +1,5 @@
 RedirectMatch 301 CDList.html /rprweb/cdlist.php
+Redirect 301 /samPHPweb/logo.gif /rprweb/images/progulus-logo-1.png
 
 #RewriteEngine On
 #RewriteBase /
@@ -6,3 +7,5 @@ RedirectMatch 301 CDList.html /rprweb/cdlist.php
 #RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
 
 php_value include_path  ".:/mnt/projects/progulus/www/progulus.com/include:/mnt/projects/progulus/www/progulus.com/vendor"
+
+
