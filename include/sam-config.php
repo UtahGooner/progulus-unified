@@ -14,7 +14,7 @@ date_default_timezone_set(     'America/Denver');
 
 /*
  * DEFINE THE FORUM LOGIN VALUES HERE, RATHER THAN IN THE VARIABLES
- * The values assinged here will be assiged to the variables later on
+ * The values assigned here will be assigned to the variables later on
  */
 if (!defined('DB_CONSTANTS_DEFINED')) {
   define('FORUM_HOST',             $_ENV['FORUM_HOST']);

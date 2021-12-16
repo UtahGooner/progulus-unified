@@ -1,0 +1,10 @@
+{
+  "backup_mode": false,
+  "request_epic_days": [1,3,4,5,6,7],
+  "request_epic_duration": 780000,
+  "request_epic_twofer_days": false,
+  "request_twofer_days": [2,6],
+  "tagboard_arg": "host=progulus",
+  "tagboard_enabled": true,
+  "tagboard_message": "<link href='http://fonts.googleapis.com/css?family=Rock+Salt' rel='stylesheet' type='text/css'>\n<div class=\"ui-state-highlight ui-corner-all\" style=\"padding: 5px; font-family: Rock Salt, arial, sans-serif; font-size: 16px;\">\nYarr Mateys. T' innernets are bobbing without a mainsail and cannae connect. T' bosun has dispatched his most trusty mate to plug the holes.\n<br>\n<hr>\n<br>\nNid wyf yn y swyddfa ar hyn o bryd. Anfonwch unrhyw waith i'w gyfieithu\n</div>"
+}

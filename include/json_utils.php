@@ -7,7 +7,8 @@ if (!function_exists('json_post')) {
      * @param bool $assoc Convert to associative array.
      * @return mixed|null
      */
-    function json_post($filter = [], $assoc = false) {
+    function json_post(array $filter = [], bool $assoc = false)
+    {
         try {
             $post = file_get_contents("php://input");
             $parsed = json_decode($post, $assoc);
@@ -28,7 +29,8 @@ if (!function_exists('json_send')) {
      * @param mixed $value
      * @param int $flags
      */
-    function json_send($value, $flags = 0) {
+    function json_send($value, int $flags = 0)
+    {
         if (headers_sent($filename, $line)) {
             trigger_error("Headers have already been sent in file '{$filename}' at line {$line}",
                 E_USER_ERROR);

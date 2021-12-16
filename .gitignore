@@ -2,3 +2,8 @@
 /include/.env
 /lastfm*.*
 /google*.html
+/node_modules/
+/*.*
+!/index.php
+/.idea
+/**/*.map

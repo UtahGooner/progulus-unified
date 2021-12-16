@@ -1,43 +1,23 @@
 <?php
 
-use progulusAPI\SamPDO;
+namespace progulusAPI;
+
+
+use \Exception;
+use \PDO;
 
 require_once 'SamPDO.php';
 require_once 'autoload.inc.php';
 require_once 'json_utils.php';
+require_once 'CurrentSong.php';
 
-$querySongs = "SELECT s.id,
-           s.duration,
-           s.artist,
-           s.album,
-           s.title,
-           s.label,
-           s.albumyear,
-           s.website,
-           s.buycd,
-           s.picture,
-           s.votes,
-           s.rating,
-           s.label,
-           h.date_played,
-           IFNULL(rh.username, 'HAL')                       AS requester,
-           IFNULL(rl.name, '')                              AS msgname,
-           IFNULL(rl.msg, '')                               AS msg,
-           UNIX_TIMESTAMP() - UNIX_TIMESTAMP(h.date_played) AS sinceStart
-    FROM samdb.historylist h
-         INNER JOIN samdb.songlist s
-                    ON s.id = h.songID
-         LEFT JOIN  samdb.request_history rh
-                    ON rh.requestID = h.requestID
-                        AND rh.songID = h.songID
-         LEFT JOIN  samdb.requestlist rl
-                    ON rl.ID = h.requestID
-                        AND rl.songID = h.songID
-    ORDER BY h.id DESC
-    LIMIT :offset, :limit";
+global $user;
+$userID = $user->data['user_id'];
+
+$querySongs = file_get_contents('./current.sql');
 
 $limit = filter_input(INPUT_GET, 'limit', FILTER_SANITIZE_NUMBER_INT);
-if (empty($limit) || $limit > 25) {
+if (empty($limit) || $limit > 50) {
     $limit = 10;
 }
 $offset = filter_input(INPUT_GET, 'offset', FILTER_SANITIZE_NUMBER_INT);
@@ -45,7 +25,13 @@ if (empty($offset)) {
     $offset = 0;
 }
 
+$before = filter_input(INPUT_GET, 'before', FILTER_SANITIZE_NUMBER_INT);
+if (empty($before)) {
+    $before = 0;
+}
+
 $response = [];
+$response['songs'] = [];
 try {
     $pdo = SamPDO::singleton();
     if (!$pdo) {
@@ -54,10 +40,17 @@ try {
     $ps = $pdo->prepare($querySongs);
     $ps->bindValue(':offset', $offset, PDO::PARAM_INT);
     $ps->bindValue(':limit', $limit, PDO::PARAM_INT);
-    $ps->execute();
-    $rows = $ps->fetchAll(PDO::FETCH_ASSOC);
-    $response['songs'] = $rows;
+    $ps->bindValue(':userID', $userID, PDO::PARAM_INT);
+    $ps->bindValue(':before', $before, PDO::PARAM_INT);
+
+    if (!$ps->execute()) {
+        throw new Exception($ps->errorInfo()[2]);
+    }
+
+    while ($row = $ps->fetch(PDO::FETCH_ASSOC)) {
+        $response['songs'][] = new CurrentSong($row);
+    }
 } catch (\Exception $ex) {
     $response['error'] = $ex->getMessage();
 }
-json_send($response);
+json_send($response, JSON_PRETTY_PRINT);

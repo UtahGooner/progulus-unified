@@ -16,6 +16,20 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="MUKUNTUWEAP">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="gutenprog.com">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="oraibi.chums.com">
         <serverdata>
           <mappings>
@@ -40,7 +54,15 @@
             <excludedPath path="/pictures_thumbs" />
             <excludedPath path="/rprweb" />
             <excludedPath path="/sambc" />
+            <excludedPath path="/ui" />
           </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="www.progulus.com/ui">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
         </serverdata>
       </paths>
     </serverData>

@@ -1,0 +1,25 @@
+{
+  "name": "progulus-unified",
+  "version": "3.0.0",
+  "description": "Progulus unified UI/API",
+  "main": "index.php",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UtahGooner/progulus-unified.git"
+  },
+  "author": "Steve Montgomery",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/UtahGooner/progulus-unified/issues"
+  },
+  "homepage": "https://github.com/UtahGooner/progulus-unified#readme",
+  "dependencies": {
+    "bootstrap": "^5.1.3"
+  }
+}

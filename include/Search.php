@@ -1,9 +1,15 @@
 <?php
 
-use progulusAPI\SamPDO;
+namespace progulusAPI;
+
+use \Exception;
+use \PDO;
+
+require_once 'SearchResult.php';
 
 $sqlArtist = "
 SELECT s.artist,
+       SUM(s.duration) AS duration,
        SUM(IFNULL(q.id, 0)) > 0                                         AS queued,
        MAX(s.date_played) > DATE_SUB(NOW(), INTERVAL 3 HOUR)            AS recent,
        SUM(IFNULL(s.votes, 0))                                          AS votes,
@@ -16,7 +22,9 @@ SELECT s.artist,
        COUNT(DISTINCT r.songID)                                         AS userVotes,
        IF(COUNT(DISTINCT r.songID) = 0, 0,
           SUM(IFNULL(r.rating, 0)) / COUNT(DISTINCT r.songID))          AS userRating,
-       GROUP_CONCAT(DISTINCT s.genre)                                   AS genre
+       GROUP_CONCAT(DISTINCT s.genre)                                   AS genre,
+       (SELECT s.picture FROM samdb.songlist WHERE artist = s.artist ORDER BY RAND() LIMIT 1) AS picture,
+       GROUP_CONCAT(DISTINCT s.albumyear) AS albumyear
 FROM samdb.songlist s
      LEFT JOIN queuelist q
                ON q.songID = s.id
@@ -40,6 +48,7 @@ ORDER BY artist
 $sqlAlbum = "
 SELECT s.artist,
        s.album,
+       SUM(s.duration) AS duration,
        SUM(IFNULL(q.id, 0)) > 0                                         AS queued,
        MAX(s.date_played) > DATE_SUB(NOW(), INTERVAL 3 HOUR)            AS recent,
        SUM(IFNULL(s.votes, 0))                                          AS votes,
@@ -52,7 +61,9 @@ SELECT s.artist,
        COUNT(DISTINCT r.songID)                                         AS userVotes,
        IF(COUNT(DISTINCT r.songID) = 0, 0,
           SUM(IFNULL(r.rating, 0)) / COUNT(DISTINCT r.songID))          AS userRating,
-       GROUP_CONCAT(DISTINCT s.genre)                                   AS genre
+       GROUP_CONCAT(DISTINCT s.genre)                                   AS genre,
+       (SELECT s.picture FROM samdb.songlist WHERE artist = s.artist AND album = s.album LIMIT 1) AS picture,
+       s.albumyear AS albumyear
 FROM samdb.songlist s
      LEFT JOIN queuelist q
                ON q.songID = s.id
@@ -75,9 +86,11 @@ ORDER BY artist, album
 
 
 $sqlSong = "
-SELECT s.artist,
+SELECT s.id,
+       s.artist,
        s.album,
        s.title,
+       s.duration,
        IFNULL(q.id, 0) > 0                              AS queued,
        s.date_played > DATE_SUB(NOW(), INTERVAL 3 HOUR) AS recent,
        IFNULL(s.votes, 0)                               AS votes,
@@ -87,7 +100,10 @@ SELECT s.artist,
        s.date_played                                    AS dateLastPlayed,
        s.count_played                                   AS plays,
        r.rating                                         AS userRating,
-       s.genre                                          AS genre
+       s.genre                                          AS genre,
+       s.trackno                                        AS track,
+       s.picture,
+       s.albumyear AS albumyear
 FROM samdb.songlist s
      LEFT JOIN queuelist q
                ON q.songID = s.id
@@ -105,27 +121,64 @@ WHERE (ISNULL(NULLIF(:artist, '')) OR s.artist REGEXP :artist)
   AND IFNULL(r.rating, 0) BETWEEN :minUserRating AND :maxUserRating
   AND (ISNULL(:since) OR s.date_played <= DATE_SUB(NOW(), INTERVAL :since MONTH))
 ORDER BY artist, album, trackno
+LIMIT 500
 ";
 
 class Search {
+    const SEARCH_FOR_ARTIST = 'artist';
+    const SEARCH_FOR_ALBUM = 'album';
+    const SEARCH_FOR_SONG = 'song';
+
+    const SEARCH_RESULT_ARTISTS = 'artists';
+    const SEARCH_RESULT_ALBUMS = 'albums';
+    const SEARCH_RESULT_SONGS = 'songs';
+
     public $responseType = 'songs';
-    public $for = 'song';
+    public $for = '';
     public $userID = 0;
-    public $artist = '';
-    public $album = '';
-    public $country = '';
-    public $title = '';
-    public $genre = '';
-    public $year = '';
-    public $rated = [0,5];
-    public $rating = [0,5];
+    public $artist = null;
+    public $album = null;
+    public $country = null;
+    public $title = null;
+    public $genre = null;
+    public $year = null;
+    public $rated = [0, 5];
+    public $rating = [0, 5];
     public $since = null;
 
-    public function __construct()
+    /**
+     * Search constructor.
+     * @param string|null $artist
+     * @param string|null $album
+     * @param string|null $title
+     */
+    public function __construct(?string $artist = null, ?string $album = null, ?string $title = null)
     {
         global $user;
         $this->userID = $user->data['user_id'];
-        $this->for = filter_input(INPUT_GET, 'for', FILTER_SANITIZE_STRING);
+        if (empty($artist) && empty($album) && empty($title)) {
+            $this->artist = '^';
+            $this->for = self::SEARCH_FOR_ARTIST;
+        } else {
+            if (!empty($artist)) {
+                $this->artist = '^' . $artist . '$';
+                $this->for = self::SEARCH_FOR_ARTIST;
+            }
+            if (!empty($album)) {
+                $this->album = '^' . $album . '$';
+                $this->for = self::SEARCH_FOR_ALBUM;
+            }
+            if (!empty($title)) {
+                $this->$title = $title;
+                $this->for = self::SEARCH_FOR_SONG;
+            }
+        }
+        $this->responseType = $this->getResponseType();
+    }
+
+    public function parseQueryString()
+    {
+        $this->for = filter_input(INPUT_GET, 'for', FILTER_SANITIZE_STRING) ?? $this->for;
         $this->artist = filter_input(INPUT_GET, 'artist', FILTER_SANITIZE_STRING);
         $this->album = filter_input(INPUT_GET, 'album', FILTER_SANITIZE_STRING);
         $this->country = filter_input(INPUT_GET, 'country', FILTER_SANITIZE_STRING);
@@ -138,24 +191,31 @@ class Search {
         $this->rating = splitSearchRating($rating ?? '');
         $this->since = filter_input(INPUT_GET, 'since', FILTER_SANITIZE_STRING);
         $this->responseType = $this->getResponseType();
-
     }
 
-    public function getResponseType():string {
-        switch (strtolower($this->for ?? 'song')) {
-            case 'artist':
-            case 'artists':
-                return 'artists';
-            case 'album':
-            case 'albums':
-                return 'albums';
+    public function setResponseType()
+    {
+        $this->responseType = $this->getResponseType();
+    }
+
+    public function getResponseType(): string
+    {
+        switch (strtolower($this->for ?? self::SEARCH_FOR_SONG)) {
+            case self::SEARCH_FOR_ARTIST:
+            case self::SEARCH_RESULT_ARTISTS:
+                return self::SEARCH_RESULT_ARTISTS;
+            case self::SEARCH_FOR_ALBUM:
+            case self::SEARCH_RESULT_ALBUMS:
+                return self::SEARCH_RESULT_ALBUMS;
             default:
-                return 'songs';
+                return self::SEARCH_RESULT_SONGS;
         }
     }
 
-    private function getSQL():string {
-        global  $sqlArtist, $sqlAlbum, $sqlSong;
+    private function getSQL(): string
+    {
+        global $sqlArtist, $sqlAlbum, $sqlSong;
+        $this->setResponseType();
         switch ($this->responseType) {
             case 'artists':
                 return $sqlArtist;
@@ -166,41 +226,12 @@ class Search {
         }
     }
 
-    public static function convertValues ($row) {
-        if (isset($row['queued'])) {
-            $row['queued'] = (bool) $row['queued'];
-        }
-        if (isset($row['recent'])) {
-            $row['recent'] = (bool) $row['recent'];
-        }
-        if (isset($row['votes'])) {
-            $row['votes'] = (int)$row['votes'];
-        }
-        if (isset($row['plays'])) {
-            $row['plays'] = (int)$row['plays'];
-        }
-        if (isset($row['songs'])) {
-            $row['songs'] = (int)$row['songs'];
-        }
-        if (isset($row['voteRatings'])) {
-            $row['voteRatings'] = (float)$row['voteRatings'];
-        }
-        if (isset($row['avgRating'])) {
-            $row['avgRating'] = (float)$row['avgRating'];
-        }
-        if (isset($row['userRating'])) {
-            $row['userRating'] = (float)$row['userRating'];
-        }
-        if (isset($row['userVotes'])) {
-            $row['userVotes'] = (int)$row['userVotes'];
-        }
-        return $row;
-    }
-
     /**
+     * @return SearchResult[]
      * @throws Exception
      */
-    public function getResults() {
+    public function getResults(): array
+    {
         $sql = $this->getSQL();
         $pdo = SamPDO::singleton();
         if (!$pdo) {
@@ -219,15 +250,15 @@ class Search {
         $ps->bindValue('minUserRating', $this->rated[0], PDO::PARAM_STR);
         $ps->bindValue('maxUserRating', $this->rated[1], PDO::PARAM_STR);
         $ps->bindValue('since', $this->since, PDO::PARAM_INT);
-        $ps->execute();
+        $results = [];
         if (!$ps->execute()) {
-            throw new Exception($ps->errorInfo(), $ps->errorCode());
+            trigger_error($ps->errorInfo()[2]);
+            throw new Exception($ps->errorInfo()[2]);
         }
-        $rows = $ps->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($rows as $index => $row) {
-            $rows[$index] = self::convertValues($row);
+        while ($row = $ps->fetch(PDO::FETCH_ASSOC)) {
+            $results[] = new SearchResult($row);
         }
         $ps->closeCursor();
-        return $rows;
+        return $results;
     }
 }

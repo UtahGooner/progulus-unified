@@ -1,0 +1,8 @@
+AddOutputFilterByType DEFLATE application/json
+
+<Files "*.sql">
+    Require all denied
+</Files>
+<Files "*.json">
+    Require all denied
+</Files>
