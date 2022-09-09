@@ -1,6 +1,6 @@
 {
   "name": "progulus-unified",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Progulus Unified API",
   "main": "index.js",
   "directories": {
