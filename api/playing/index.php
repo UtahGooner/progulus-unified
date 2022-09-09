@@ -10,6 +10,8 @@ require_once 'SamPDO.php';
 require_once 'autoload.inc.php';
 require_once 'json_utils.php';
 require_once 'CurrentSong.php';
+require_once 'SongRating.php';
+
 
 global $user;
 $userID = $user->data['user_id'];
@@ -18,41 +20,30 @@ $response = [];
 $response['user'] = $userID;
 $response['songs'] = [];
 $response['queue'] = [];
-try {
-    $querySongs = file_get_contents('./current.sql');
-    $queryQueue = file_get_contents('./queue.sql');
 
+try {
     $limit = filter_input(INPUT_GET, 'limit', FILTER_VALIDATE_INT);
     $offset = filter_input(INPUT_GET, 'offset', FILTER_VALIDATE_INT);
     $before = filter_input(INPUT_GET, 'before', FILTER_VALIDATE_INT);
 
-    $pdo = SamPDO::singleton();
-    if (!$pdo) {
-        throw new Exception('Unable to connect to database');
-    }
-    $ps = $pdo->prepare($querySongs);
-    $ps->bindValue(':offset', $offset ?? 0, PDO::PARAM_INT);
-    $ps->bindValue(':limit', $limit ?? 10, PDO::PARAM_INT);
-    $ps->bindValue(':userID', $userID, PDO::PARAM_INT);
-    $ps->bindValue(':before', $before ?? 0, PDO::PARAM_INT);
+    $response['songs'] = CurrentSong::loadCurrentSongs($userID, $limit ?? 10, $offset ?? 0, $before ?? 0);
+    $response['queue'] = CurrentSong::loadQueue($userID);
 
-    if (!$ps->execute()) {
-        throw new Exception($ps->errorInfo()[2]);
+    $songIDs = [];
+    foreach($response['songs'] as $song) {
+        $songIDs[] = $song->id;
     }
-
-    while ($row = $ps->fetch(PDO::FETCH_ASSOC)) {
-        $response['songs'][] = new CurrentSong($row);
+    foreach($response['queue'] as $song) {
+        $songIDs[] = $song->id;
     }
-
-    $ps = $pdo->prepare($queryQueue);
-    $ps->bindValue('userID', $userID, PDO::PARAM_INT);
-    if (!$ps->execute()) {
-        throw new Exception($ps->errorInfo()[2]);
+    $ratings = SongRating::loadList($songIDs);
+    foreach($response['songs'] as $song) {
+        $song->ratings = $ratings[$song->id];
+    }
+    foreach($response['queue'] as $song) {
+        $song->ratings = $ratings[$song->id];
     }
 
-    while ($row = $ps->fetch(PDO::FETCH_ASSOC)) {
-        $response['queue'][] = new CurrentSong($row);
-    }
 } catch (\Exception $ex) {
     $response['error'] = $ex->getMessage();
 }
