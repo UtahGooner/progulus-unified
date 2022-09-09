@@ -27,9 +27,10 @@ if (!function_exists('json_send')) {
 
     /**
      * @param mixed $value
-     * @param int $flags
+     * @param int $flags See $flags param for json_encode
+     * @param int $cacheExpires number of seconds before the cache expires
      */
-    function json_send($value, int $flags = 0)
+    function json_send($value, int $flags = 0, int $cacheExpires = 0)
     {
         if (headers_sent($filename, $line)) {
             trigger_error("Headers have already been sent in file '{$filename}' at line {$line}",
@@ -41,8 +42,12 @@ if (!function_exists('json_send')) {
         } catch (\Exception $ex) {
             echo json_encode(['parse_error' => $ex->getMessage()]);
         }
-        header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
-        header("Expires: Mon, 26 Jul 1997 05:00:00 GMT"); // Date in the past
+        if ($cacheExpires === 0) {
+            header("Cache-Control: no-cache, must-revalidate"); // HTTP/1.1
+            header("Expires: Mon, 26 Jul 1997 05:00:00 GMT"); // Date in the past
+        } else {
+            header("Cache-Control: max-age={$cacheExpires}"); // HTTP/1.1
+        }
         header("Content-type: application/json");
         header("Content-Length: " . ob_get_length());
         ob_end_flush();
