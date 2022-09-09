@@ -2,127 +2,10 @@
 
 namespace progulusAPI;
 
-use \Exception;
-use \PDO;
+use Exception;
+use PDO;
 
 require_once 'SearchResult.php';
-
-$sqlArtist = "
-SELECT s.artist,
-       SUM(s.duration) AS duration,
-       SUM(IFNULL(q.id, 0)) > 0                                         AS queued,
-       MAX(s.date_played) > DATE_SUB(NOW(), INTERVAL 3 HOUR)            AS recent,
-       SUM(IFNULL(s.votes, 0))                                          AS votes,
-       SUM(IFNULL(s.rating, 0) * votes)                                 AS voteRatings,
-       IF(SUM(IFNULL(s.votes, 0)) = 0, 0,
-          SUM(IFNULL(s.rating, 0) * s.votes) / SUM(IFNULL(s.votes, 0))) AS avgRating,
-       MAX(s.date_played)                                               AS dateLastPlayed,
-       SUM(s.count_played)                                              AS plays,
-       COUNT(s.id)                                                      AS songs,
-       COUNT(DISTINCT r.songID)                                         AS userVotes,
-       IF(COUNT(DISTINCT r.songID) = 0, 0,
-          SUM(IFNULL(r.rating, 0)) / COUNT(DISTINCT r.songID))          AS userRating,
-       GROUP_CONCAT(DISTINCT s.genre)                                   AS genre,
-       (SELECT s.picture FROM samdb.songlist WHERE artist = s.artist ORDER BY RAND() LIMIT 1) AS picture,
-       GROUP_CONCAT(DISTINCT s.albumyear) AS albumyear
-FROM samdb.songlist s
-     LEFT JOIN queuelist q
-               ON q.songID = s.id
-     LEFT JOIN samdb.song_rating r
-               ON r.songID = s.ID AND r.userID = :userID
-WHERE (ISNULL(NULLIF(:artist, '')) OR s.artist REGEXP :artist)
-  AND (ISNULL(NULLIF(:country, '')) OR s.label = :country)
-  AND (ISNULL(NULLIF(:album, '')) OR s.album REGEXP :album)
-  AND (ISNULL(NULLIF(:title, '')) OR s.title REGEXP :title)
-  AND (ISNULL(NULLIF(:genre, '')) OR s.genre REGEXP :genre)
-  AND (ISNULL(NULLIF(:year, ''))
-    OR IF(:year = 'new', date_added > DATE_SUB(NOW(), INTERVAL 30 DAY), s.albumyear REGEXP :year)
-    )
-GROUP BY artist
-HAVING avgRating BETWEEN :minAvgRating AND :maxAvgRating
-   AND userRating BETWEEN :minUserRating AND :maxUserRating
-   AND (ISNULL(:since) OR dateLastPlayed <= DATE_SUB(NOW(), INTERVAL :since MONTH))
-ORDER BY artist
-";
-
-$sqlAlbum = "
-SELECT s.artist,
-       s.album,
-       SUM(s.duration) AS duration,
-       SUM(IFNULL(q.id, 0)) > 0                                         AS queued,
-       MAX(s.date_played) > DATE_SUB(NOW(), INTERVAL 3 HOUR)            AS recent,
-       SUM(IFNULL(s.votes, 0))                                          AS votes,
-       SUM(IFNULL(s.rating, 0) * votes)                                 AS voteRatings,
-       IF(SUM(IFNULL(s.votes, 0)) = 0, 0,
-          SUM(IFNULL(s.rating, 0) * s.votes) / SUM(IFNULL(s.votes, 0))) AS avgRating,
-       MAX(s.date_played)                                               AS dateLastPlayed,
-       SUM(s.count_played)                                              AS plays,
-       COUNT(s.id)                                                      AS songs,
-       COUNT(DISTINCT r.songID)                                         AS userVotes,
-       IF(COUNT(DISTINCT r.songID) = 0, 0,
-          SUM(IFNULL(r.rating, 0)) / COUNT(DISTINCT r.songID))          AS userRating,
-       GROUP_CONCAT(DISTINCT s.genre)                                   AS genre,
-       (SELECT s.picture FROM samdb.songlist WHERE artist = s.artist AND album = s.album LIMIT 1) AS picture,
-       s.albumyear AS albumyear
-FROM samdb.songlist s
-     LEFT JOIN queuelist q
-               ON q.songID = s.id
-     LEFT JOIN samdb.song_rating r
-               ON r.songID = s.ID AND r.userID = :userID
-WHERE (ISNULL(NULLIF(:artist, '')) OR s.artist REGEXP :artist)
-  AND (ISNULL(NULLIF(:country, '')) OR s.label = :country)
-  AND (ISNULL(NULLIF(:album, '')) OR s.album REGEXP :album)
-  AND (ISNULL(NULLIF(:title, '')) OR s.title REGEXP :title)
-  AND (ISNULL(NULLIF(:genre, '')) OR s.genre REGEXP :genre)
-  AND (ISNULL(NULLIF(:year, ''))
-    OR IF(:year = 'new', date_added > DATE_SUB(NOW(), INTERVAL 30 DAY), s.albumyear REGEXP :year)
-    )
-GROUP BY artist, album
-HAVING avgRating BETWEEN :minAvgRating AND :maxAvgRating
-   AND userRating BETWEEN :minUserRating AND :maxUserRating
-   AND (ISNULL(:since) OR dateLastPlayed <= DATE_SUB(NOW(), INTERVAL :since MONTH))
-ORDER BY artist, album
-";
-
-
-$sqlSong = "
-SELECT s.id,
-       s.artist,
-       s.album,
-       s.title,
-       s.duration,
-       IFNULL(q.id, 0) > 0                              AS queued,
-       s.date_played > DATE_SUB(NOW(), INTERVAL 3 HOUR) AS recent,
-       IFNULL(s.votes, 0)                               AS votes,
-       IFNULL(s.rating, 0) * votes                      AS voteRatings,
-       IF(IFNULL(s.votes, 0) = 0, 0,
-          (IFNULL(s.rating, 0) * s.votes) / s.votes)    AS avgRating,
-       s.date_played                                    AS dateLastPlayed,
-       s.count_played                                   AS plays,
-       r.rating                                         AS userRating,
-       s.genre                                          AS genre,
-       s.trackno                                        AS track,
-       s.picture,
-       s.albumyear AS albumyear
-FROM samdb.songlist s
-     LEFT JOIN queuelist q
-               ON q.songID = s.id
-     LEFT JOIN samdb.song_rating r
-               ON r.songID = s.ID AND r.userID = :userID
-WHERE (ISNULL(NULLIF(:artist, '')) OR s.artist REGEXP :artist)
-  AND (ISNULL(NULLIF(:country, '')) OR s.label = :country)
-  AND (ISNULL(NULLIF(:album, '')) OR s.album REGEXP :album)
-  AND (ISNULL(NULLIF(:title, '')) OR s.title REGEXP :title)
-  AND (ISNULL(NULLIF(:genre, '')) OR s.genre REGEXP :genre)
-  AND (ISNULL(NULLIF(:year, ''))
-    OR IF(:year = 'new', date_added > DATE_SUB(NOW(), INTERVAL 30 DAY), s.albumyear REGEXP :year)
-    )
-  AND IFNULL(s.rating, 0) BETWEEN :minAvgRating AND :maxAvgRating
-  AND IFNULL(r.rating, 0) BETWEEN :minUserRating AND :maxUserRating
-  AND (ISNULL(:since) OR s.date_played <= DATE_SUB(NOW(), INTERVAL :since MONTH))
-ORDER BY artist, album, trackno
-LIMIT 500
-";
 
 class Search {
     const SEARCH_FOR_ARTIST = 'artist';
@@ -132,6 +15,18 @@ class Search {
     const SEARCH_RESULT_ARTISTS = 'artists';
     const SEARCH_RESULT_ALBUMS = 'albums';
     const SEARCH_RESULT_SONGS = 'songs';
+
+    const SEARCH_YEAR = '/year:[ ]{0,1}(new|[0-9]{4}|[0-9\[\]\|\-\(\)]+)[ ]*/i';
+    const SEARCH_COUNTRY = '/country:[ ]{0,1}(multi|[a-z]{2}|[\S\(\)\|\[\]]+)[ ]*/i';
+    const SEARCH_RATING = '/(avg|rating):[ ]{0,1}([0-5][\.]*[0-9]*)[\-]*([0-5]*[\.]*[0-9]*)[ ]*/i';
+    const SEARCH_RATED = '/(my|rated):[ ]{0,1}([0-5][\.]*[0-9]*)(x[0-9]{0,2})*[\-]*([0-5]*[\.]*[0-9]*)[ ]*/i';
+    const SEARCH_SINCE = '/since:[ ]{0,1}([0-9]+)/i';
+    const SEARCH_ARTIST = "/artist:[ ]{0,1}([\w]+|[\"'‘“‹«](.*?)[\"'’”›»])[ ]*/i";
+    const SEARCH_ALBUM = "/album:[ ]{0,1}([\w]+|[\"'‘“‹«](.*?)[\"'’”›»])[ ]*/i";
+    const SEARCH_SONG = "/song:[ ]{0,1}([\w]+|[\"'‘“‹«](.*?)[\"'’”›»])[ ]*/i";
+    const SEARCH_GENRE = "/genre:[ ]{0,1}([\w]+|[\"'‘“‹«](.*?)[\"'’”›»])[ ]*/i";
+
+
 
     public $responseType = 'songs';
     public $for = '';
@@ -145,6 +40,8 @@ class Search {
     public $rated = [0, 5];
     public $rating = [0, 5];
     public $since = null;
+    public $albums = null;
+    public $search = '';
 
     /**
      * Search constructor.
@@ -179,18 +76,102 @@ class Search {
     public function parseQueryString()
     {
         $this->for = filter_input(INPUT_GET, 'for', FILTER_SANITIZE_STRING) ?? $this->for;
-        $this->artist = filter_input(INPUT_GET, 'artist', FILTER_SANITIZE_STRING);
-        $this->album = filter_input(INPUT_GET, 'album', FILTER_SANITIZE_STRING);
+        $this->artist = filter_input(INPUT_GET, 'artist', FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES);
+        $this->album = filter_input(INPUT_GET, 'album', FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES);
         $this->country = filter_input(INPUT_GET, 'country', FILTER_SANITIZE_STRING);
-        $this->title = filter_input(INPUT_GET, 'title', FILTER_SANITIZE_STRING);
-        $this->genre = filter_input(INPUT_GET, 'genre', FILTER_SANITIZE_STRING);
+        if (stripos($this->country, ',') !== false) {
+            $countries = preg_split("/,\s*/", $this->country);
+            $this->country = "(" . implode("|", $countries) . ")";
+        }
+        $this->title = filter_input(INPUT_GET, 'title', FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES);
+        $this->genre = filter_input(INPUT_GET, 'genre', FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES);
         $this->year = filter_input(INPUT_GET, 'year', FILTER_SANITIZE_STRING);
         $rated = filter_input(INPUT_GET, 'rated', FILTER_SANITIZE_STRING);
-        $this->rated = splitSearchRating($rated ?? '');
+        $this->rated = Search::splitSearchRating($rated ?? '');
         $rating = filter_input(INPUT_GET, 'rating', FILTER_SANITIZE_STRING);
-        $this->rating = splitSearchRating($rating ?? '');
+        $this->rating = Search::splitSearchRating($rating ?? '');
         $this->since = filter_input(INPUT_GET, 'since', FILTER_SANITIZE_STRING);
+
+        $this->search = filter_input(INPUT_GET, 'search', FILTER_UNSAFE_RAW);
+        if ($this->search) {
+            $matches = null;
+            if (!$this->artist && preg_match(self::SEARCH_ARTIST, $this->search, $matches) === 1) {
+                trigger_error(json_encode($matches));
+                $this->artist = !empty($matches[2]) ? $matches[2] : $matches[1];
+                $this->search = preg_replace(self::SEARCH_ARTIST, '', $this->search);
+            }
+            if (!$this->album && preg_match(self::SEARCH_ALBUM, $this->search, $matches) === 1) {
+                trigger_error(json_encode($matches));
+                $this->album = !empty($matches[2]) ? $matches[2] : $matches[1];
+                $this->search = preg_replace(self::SEARCH_ALBUM, '', $this->search);
+            }
+            if (!$this->title && preg_match(self::SEARCH_SONG, $this->search, $matches) === 1) {
+                $this->title = !empty($matches[2]) ? $matches[2] : $matches[1];
+                $this->search = preg_replace(self::SEARCH_SONG, '', $this->search);
+            }
+
+            if (!$this->year && preg_match(self::SEARCH_YEAR, $this->search, $matches) === 1) {
+                $this->year = $matches[1];
+                $this->search = preg_replace(self::SEARCH_YEAR, '', $this->search);
+            }
+            if (!$this->country && preg_match(self::SEARCH_COUNTRY, $this->search, $matches) === 1) {
+                $this->country = strtoupper($matches[1]);
+                $this->search = preg_replace(self::SEARCH_COUNTRY, '', $this->search);
+            }
+            if (preg_match(self::SEARCH_RATED, $this->search, $matches) === 1) {
+                if ($matches[2] && $matches[4]) {
+                    $this->rated = [(float) $matches[2], (float) $matches[4]];
+                } else {
+                    $this->rated = Search::splitSearchRating($matches[2]);
+                }
+                if ($matches[3]) {
+                    $this->since = (int) str_replace('x', '', $matches[3]);
+                }
+                $this->search = preg_replace(self::SEARCH_RATED, '', $this->search);
+            }
+            if (preg_match(self::SEARCH_RATING, $this->search, $matches) === 1) {
+                $this->rating = Search::splitSearchRating($matches[1]);
+                $this->search = preg_replace(self::SEARCH_RATING, '', $this->search);
+            }
+            if (!$this->genre && preg_match(self::SEARCH_GENRE, $this->search, $matches) === 1) {
+                $this->genre = !empty($matches[2]) ? $matches[2] : $matches[1];
+                $this->search = preg_replace(self::SEARCH_GENRE, '', $this->search);
+            }
+            if (!$this->since && preg_match(self::SEARCH_SINCE, $this->search, $matches) === 1) {
+                $this->since = $matches[1];
+                $this->search = preg_replace(self::SEARCH_SINCE, '', $this->search);
+            }
+            if (!empty($this->search)) {
+                switch ($this->for) {
+                    case 'songs':
+                        if (!$this->title) {
+                            $this->title = self::maybeStartsWith($this->search);
+                        }
+                        break;
+                    case 'albums':
+                        if (!$this->album) {
+                            $this->album = self::maybeStartsWith($this->search);
+                        }
+                        break;
+                    case 'artists':
+                        if (!$this->artist) {
+                            $this->artist = self::maybeStartsWith($this->search);
+                        }
+                        break;
+                }
+            }
+        }
         $this->responseType = $this->getResponseType();
+    }
+
+    public static function maybeStartsWith(string $str):string {
+        if (preg_match('/[\^\$\[\]]/', $str)) {
+            return $str;
+        }
+        if (preg_match('/[%_]/', $str)) {
+            return '^' . str_replace(['%', '_'], ['.*', '.'], $str) . '$';
+        }
+        return '[[:<:]]'. $str;
     }
 
     public function setResponseType()
@@ -214,15 +195,14 @@ class Search {
 
     private function getSQL(): string
     {
-        global $sqlArtist, $sqlAlbum, $sqlSong;
         $this->setResponseType();
         switch ($this->responseType) {
             case 'artists':
-                return $sqlArtist;
+                return file_get_contents(__DIR__ . "/sql/search-artists.sql");
             case 'albums':
-                return $sqlAlbum;
+                return file_get_contents(__DIR__ . '/sql/search-albums.sql');
             default:
-                return $sqlSong;
+                return file_get_contents(__DIR__ . '/sql/search-songs.sql');
         }
     }
 
@@ -260,5 +240,34 @@ class Search {
         }
         $ps->closeCursor();
         return $results;
+    }
+    /**
+     * @param string $rating
+     * @return float[]
+     */
+    public static function splitSearchRating(string $rating = ''): array
+    {
+        $rating = explode(',', $rating);
+        $response = [0,5];
+        if (count($rating) === 1 && $rating[0] === '') {
+            return $response;
+        }
+        switch (count($rating)) {
+            case 1:
+                $response[0] = ((float) $rating[0]) - 0.25;
+                $response[1] = ((float) $rating[0]) + 0.25;
+                break;
+            case 2:
+                $response[0] = ((float) $rating[0]);
+                $response[1] = ((float) $rating[1]);
+                break;
+        }
+        if ($response[0] > 5 || $response[0] < 0) {
+            $response[0] = 0;
+        }
+        if ($response[1] > 5 || $response[1] < 0) {
+            $response[1] = 5;
+        }
+        return $response;
     }
 }

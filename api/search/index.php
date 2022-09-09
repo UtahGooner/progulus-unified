@@ -7,8 +7,6 @@ use \Exception;
 require_once 'SamPDO.php';
 require_once 'autoload.inc.php';
 require_once 'json_utils.php';
-require_once './rating_utils.php';
-require_once './search_utils.php';
 require_once 'phpbb3.userdata.php';
 require_once 'Search.php';
 
