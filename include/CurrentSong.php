@@ -11,26 +11,27 @@ require_once 'autoload.inc.php';
 
 class CurrentSong {
     public $id = 0;
-    public $duration = 0;
     public $artist = '';
     public $album = '';
     public $title = '';
-    public $country = '';
-    public $website = '';
-    public $buycd = '';
+    public $duration = 0;
     public $picture = '';
+    public $albumYear = '';
     public $votes = 0;
     public $rating = 0;
+    public $userRating = 0;
     public $dateLastPlayed = null;
+    public $website = '';
+    public $country = '';
+
+    public $buycd = '';
     public $sinceStart = 0;
     public $now = 0;
     public $requester = 'HAL';
     public $msgname = '';
     public $msg = '';
-    public $albumYear = '';
-    public $userRating = 0;
-    public $ratings = [];
     public $listeners = 0;
+    public $ratings = null;
 
     public function __construct($row)
     {

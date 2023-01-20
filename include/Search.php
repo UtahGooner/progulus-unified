@@ -87,9 +87,9 @@ class Search {
         $this->genre = filter_input(INPUT_GET, 'genre', FILTER_SANITIZE_STRING, FILTER_FLAG_NO_ENCODE_QUOTES);
         $this->year = filter_input(INPUT_GET, 'year', FILTER_SANITIZE_STRING);
         $rated = filter_input(INPUT_GET, 'rated', FILTER_SANITIZE_STRING);
-        $this->rated = Search::splitSearchRating($rated ?? '');
+        $this->rated = splitSearchRating($rated ?? '');
         $rating = filter_input(INPUT_GET, 'rating', FILTER_SANITIZE_STRING);
-        $this->rating = Search::splitSearchRating($rating ?? '');
+        $this->rating = splitSearchRating($rating ?? '');
         $this->since = filter_input(INPUT_GET, 'since', FILTER_SANITIZE_STRING);
 
         $this->search = filter_input(INPUT_GET, 'search', FILTER_UNSAFE_RAW);
@@ -122,7 +122,7 @@ class Search {
                 if ($matches[2] && $matches[4]) {
                     $this->rated = [(float) $matches[2], (float) $matches[4]];
                 } else {
-                    $this->rated = Search::splitSearchRating($matches[2]);
+                    $this->rated = splitSearchRating($matches[2]);
                 }
                 if ($matches[3]) {
                     $this->since = (int) str_replace('x', '', $matches[3]);
@@ -130,7 +130,7 @@ class Search {
                 $this->search = preg_replace(self::SEARCH_RATED, '', $this->search);
             }
             if (preg_match(self::SEARCH_RATING, $this->search, $matches) === 1) {
-                $this->rating = Search::splitSearchRating($matches[1]);
+                $this->rating = splitSearchRating($matches[1]);
                 $this->search = preg_replace(self::SEARCH_RATING, '', $this->search);
             }
             if (!$this->genre && preg_match(self::SEARCH_GENRE, $this->search, $matches) === 1) {
@@ -161,6 +161,7 @@ class Search {
                 }
             }
         }
+        trigger_error($this->artist);
         $this->responseType = $this->getResponseType();
     }
 
@@ -240,34 +241,5 @@ class Search {
         }
         $ps->closeCursor();
         return $results;
-    }
-    /**
-     * @param string $rating
-     * @return float[]
-     */
-    public static function splitSearchRating(string $rating = ''): array
-    {
-        $rating = explode(',', $rating);
-        $response = [0,5];
-        if (count($rating) === 1 && $rating[0] === '') {
-            return $response;
-        }
-        switch (count($rating)) {
-            case 1:
-                $response[0] = ((float) $rating[0]) - 0.25;
-                $response[1] = ((float) $rating[0]) + 0.25;
-                break;
-            case 2:
-                $response[0] = ((float) $rating[0]);
-                $response[1] = ((float) $rating[1]);
-                break;
-        }
-        if ($response[0] > 5 || $response[0] < 0) {
-            $response[0] = 0;
-        }
-        if ($response[1] > 5 || $response[1] < 0) {
-            $response[1] = 5;
-        }
-        return $response;
     }
 }

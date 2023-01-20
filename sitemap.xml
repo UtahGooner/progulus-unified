@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://progulus.com/rprweb/#page-playing</loc>
+        <lastmod>2020-05-25</lastmod>
+        <changefreq>always</changefreq>
+    </url>
+    <url>
+        <loc>https://progulus.com/rprweb/#page-search</loc>
+        <lastmod>2020-05-25</lastmod>
+        <changefreq>weekly</changefreq>
+    </url>
+    <url>
+        <loc>https://progulus.com/rprweb/#page-history</loc>
+        <lastmod>2020-05-25</lastmod>
+        <changefreq>always</changefreq>
+    </url>
+    <url>
+        <loc>https://progulus.com/phpBB3/viewtopic.php?f=1</loc>
+        <lastmod>2020-05-25</lastmod>
+        <changefreq>weekly</changefreq>
+    </url>
+</urlset>

@@ -27,7 +27,7 @@ if (!function_exists('json_send')) {
 
     /**
      * @param mixed $value
-     * @param int $flags See $flags param for json_encode
+     * @param int $flags See $flags param for json_encode  
      * @param int $cacheExpires number of seconds before the cache expires
      */
     function json_send($value, int $flags = 0, int $cacheExpires = 0)

@@ -1,7 +1,11 @@
 /vendor/
 /include/.env
+/lastfm*.*
+/google*.html
 /node_modules/
 /.idea
 /**/*.map
-/google*.html
-/lastfm*.*
+/*.gif
+/*.tban
+/*.jpg
+/*.xls

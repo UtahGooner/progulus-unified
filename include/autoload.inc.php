@@ -19,7 +19,7 @@ ini_set('include_path',
 require_once 'sam-config.php';
 global $user;
 $userID = $user->data['user_id'];
-trigger_error(json_encode($userID));
+//trigger_error(json_encode($userID));
 if ($userID === 1) {
     include "dev-auth.php";
 }

@@ -9,6 +9,7 @@ if (isset($headers['Authorization'])) {
         if ($user->data['user_id'] === 1 && $_ENV['DEV_AUTH_STEVE'] === $userAuth) {
             $user->data['user_id'] = 24;
             $user->data['username'] = 'SteveM';
+            $user->data['user_avatar'] = "24.jpg";
         }
     }
 }
