@@ -1,0 +1,29 @@
+{
+  "name": "progulus-unified",
+  "version": "3.0.1",
+  "description": "Progulus Unified API",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "dependencies": {
+    "bootstrap": "^5.1.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UtahGooner/progulus-unified.git"
+  },
+  "keywords": [
+    "Progulus"
+  ],
+  "author": "Steve Montgomery",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/UtahGooner/progulus-unified/issues"
+  },
+  "homepage": "https://github.com/UtahGooner/progulus-unified#readme"
+}

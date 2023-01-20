@@ -1,4 +1,5 @@
 /vendor/
 /include/.env
-/lastfm*.*
-/google*.html
+/node_modules/
+/.idea
+/**/*.map

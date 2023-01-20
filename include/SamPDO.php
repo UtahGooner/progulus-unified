@@ -44,8 +44,8 @@ class SamPDO
                 self::$instance->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY , true);
             } catch (PDOException $e) {
                 self::$exception = $e;
-                trigger_error("Connection failed: " . $e->getMessage(), E_USER_NOTICE);
-                throw new \Exception('Unable to connect to databse');
+//                trigger_error("Connection failed: " . $e->getMessage(), E_USER_NOTICE);
+                throw new \Exception('Unable to connect to database');
             }
         }
 
